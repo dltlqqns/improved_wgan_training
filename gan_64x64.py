@@ -14,15 +14,16 @@ import tflib.ops.conv2d
 import tflib.ops.batchnorm
 import tflib.ops.deconv2d
 import tflib.save_images
-import tflib.small_imagenet
+#import tflib.small_imagenet
+import tflib.web_oneclass
 import tflib.ops.layernorm
 import tflib.plot
 
 # Download 64x64 ImageNet at http://image-net.org/small/download.php and
 # fill in the path to the extracted files here!
-DATA_DIR = ''
-if len(DATA_DIR) == 0:
-    raise Exception('Please specify path to data directory in gan_64x64.py!')
+#DATA_DIR = ''
+#if len(DATA_DIR) == 0:
+#    raise Exception('Please specify path to data directory in gan_64x64.py!')
 
 MODE = 'wgan-gp' # dcgan, wgan, wgan-gp, lsgan
 DIM = 64 # Model dimensionality
@@ -32,6 +33,7 @@ BATCH_SIZE = 64 # Batch size. Must be a multiple of N_GPUS
 ITERS = 200000 # How many iterations to train for
 LAMBDA = 10 # Gradient penalty lambda hyperparameter
 OUTPUT_DIM = 64*64*3 # Number of pixels in each iamge
+CLASSNAME = 'horse'
 
 lib.print_model_settings(locals().copy())
 
@@ -484,7 +486,8 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
 
 
     # Dataset iterator
-    train_gen, dev_gen = lib.small_imagenet.load(BATCH_SIZE, data_dir=DATA_DIR)
+    #train_gen, dev_gen = lib.small_imagenet.load(BATCH_SIZE, data_dir=DATA_DIR)
+    train_gen, dev_gen = lib.web_oneclass.load(CLASSNAME, image_size=64, batch_size= BATCH_SIZE)
 
     def inf_train_gen():
         while True:

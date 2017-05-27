@@ -17,6 +17,7 @@ def cifar_generator(filenames, batch_size, data_dir):
         all_data.append(unpickle(data_dir + '/' + filename))
 
     images = np.concatenate(all_data, axis=0)
+    print(images.shape)
 
     def get_epoch():
         np.random.shuffle(images)
