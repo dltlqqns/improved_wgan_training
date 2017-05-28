@@ -27,18 +27,21 @@ import os
 #    raise Exception('Please specify path to data directory in gan_64x64.py!')
 
 MODE = 'wgan-gp' # dcgan, wgan, wgan-gp, lsgan
-DIM = 64 # Model dimensionality
+DIM = 32 # Model dimensionality
 CRITIC_ITERS = 5 # How many iterations to train the critic for
 N_GPUS = 1 # Number of GPUs
 BATCH_SIZE = 64 # Batch size. Must be a multiple of N_GPUS
 ITERS = 200000 # How many iterations to train for
 LAMBDA = 10 # Gradient penalty lambda hyperparameter
-OUTPUT_DIM = 64*64*3 # Number of pixels in each iamge
-CLASSNAME = 'truck'
-ARCH = 'ResNet' #'DCGAN'
+TARGET_SIZE = 128
+OUTPUT_DIM = TARGET_SIZE*TARGET_SIZE*3 # Number of pixels in each iamge
+CLASSNAME = 'horse'
+ARCH = 'DCGAN128' #'ResNet' #
 EXP_NAME = '{}_{}_{}'.format(ARCH, MODE, CLASSNAME)
 if not os.path.exists('samples/{}'.format(EXP_NAME)):
 	os.mkdir('samples/{}'.format(EXP_NAME))
+if not os.path.exists('models/{}'.format(EXP_NAME)):
+	os.mkdir('models/{}'.format(EXP_NAME))
 
 lib.print_model_settings(locals().copy())
 
@@ -51,6 +54,9 @@ def GeneratorAndDiscriminator():
     # Baseline (G: DCGAN, D: DCGAN)
     #return DCGANGenerator, DCGANDiscriminator
 
+    # Baseline 128 (G: DCGAN, D: DCGAN)
+    return DCGANGenerator_128, DCGANDiscriminator_128
+	
     # No BN and constant number of filts in G
     # return WGANPaper_CrippledDCGANGenerator, DCGANDiscriminator
 
@@ -68,7 +74,7 @@ def GeneratorAndDiscriminator():
     #        functools.partial(DCGANDiscriminator, bn=True, nonlinearity=tf.tanh)
 
     # 101-layer ResNet G and D
-    return ResnetGenerator, ResnetDiscriminator
+    #return ResnetGenerator, ResnetDiscriminator
 
     raise Exception('You must choose an architecture!')
 
@@ -197,6 +203,50 @@ def DCGANGenerator(n_samples, noise=None, dim=DIM, bn=True, nonlinearity=tf.nn.r
     lib.ops.linear.unset_weights_stdev()
 
     return tf.reshape(output, [-1, OUTPUT_DIM])
+	
+def DCGANGenerator_128(n_samples, noise=None, dim=DIM, bn=True, nonlinearity=tf.nn.relu):
+    lib.ops.conv2d.set_weights_stdev(0.02)
+    lib.ops.deconv2d.set_weights_stdev(0.02)
+    lib.ops.linear.set_weights_stdev(0.02)
+
+    if noise is None:
+        noise = tf.random_normal([n_samples, 128])
+
+    output = lib.ops.linear.Linear('Generator.Input', 128, 4*4*16*dim, noise)
+    output = tf.reshape(output, [-1, 16*dim, 4, 4])
+    if bn:
+        output = Batchnorm('Generator.BN1', [0,2,3], output)
+    output = nonlinearity(output)
+
+    output = lib.ops.deconv2d.Deconv2D('Generator.2', 16*dim, 8*dim, 5, output)
+    if bn:
+        output = Batchnorm('Generator.BN2', [0,2,3], output)
+    output = nonlinearity(output)
+
+    output = lib.ops.deconv2d.Deconv2D('Generator.3', 8*dim, 4*dim, 5, output)
+    if bn:
+        output = Batchnorm('Generator.BN3', [0,2,3], output)
+    output = nonlinearity(output)
+
+    output = lib.ops.deconv2d.Deconv2D('Generator.4', 4*dim, 2*dim, 5, output)
+    if bn:
+        output = Batchnorm('Generator.BN4', [0,2,3], output)
+    output = nonlinearity(output)
+
+    output = lib.ops.deconv2d.Deconv2D('Generator.5', 2*dim, dim, 5, output)
+    if bn:
+        output = Batchnorm('Generator.BN5', [0,2,3], output)
+    output = nonlinearity(output)
+
+    output = lib.ops.deconv2d.Deconv2D('Generator.6', dim, 3, 5, output)
+    output = tf.tanh(output)
+
+    lib.ops.conv2d.unset_weights_stdev()
+    lib.ops.deconv2d.unset_weights_stdev()
+    lib.ops.linear.unset_weights_stdev()
+
+    return tf.reshape(output, [-1, OUTPUT_DIM])
+
 
 def WGANPaper_CrippledDCGANGenerator(n_samples, noise=None, dim=DIM):
     if noise is None:
@@ -373,12 +423,52 @@ def DCGANDiscriminator(inputs, dim=DIM, bn=True, nonlinearity=LeakyReLU):
     lib.ops.linear.unset_weights_stdev()
 
     return tf.reshape(output, [-1])
+	
+def DCGANDiscriminator_128(inputs, dim=DIM, bn=True, nonlinearity=LeakyReLU):
+    output = tf.reshape(inputs, [-1, 3, 128, 128])
+
+    lib.ops.conv2d.set_weights_stdev(0.02)
+    lib.ops.deconv2d.set_weights_stdev(0.02)
+    lib.ops.linear.set_weights_stdev(0.02)
+
+    output = lib.ops.conv2d.Conv2D('Discriminator.1', 3, dim, 5, output, stride=2)
+    output = nonlinearity(output)
+
+    output = lib.ops.conv2d.Conv2D('Discriminator.2', dim, 2*dim, 5, output, stride=2)
+    if bn:
+        output = Batchnorm('Discriminator.BN2', [0,2,3], output)
+    output = nonlinearity(output)
+
+    output = lib.ops.conv2d.Conv2D('Discriminator.3', 2*dim, 4*dim, 5, output, stride=2)
+    if bn:
+        output = Batchnorm('Discriminator.BN3', [0,2,3], output)
+    output = nonlinearity(output)
+
+    output = lib.ops.conv2d.Conv2D('Discriminator.4', 4*dim, 8*dim, 5, output, stride=2)
+    if bn:
+        output = Batchnorm('Discriminator.BN4', [0,2,3], output)
+    output = nonlinearity(output)
+
+    output = lib.ops.conv2d.Conv2D('Discriminator.5', 8*dim, 16*dim, 5, output, stride=2)
+    if bn:
+        output = Batchnorm('Discriminator.BN5', [0,2,3], output)
+    output = nonlinearity(output)
+
+    output = tf.reshape(output, [-1, 4*4*16*dim])
+    output = lib.ops.linear.Linear('Discriminator.Output', 4*4*16*dim, 1, output)
+
+    lib.ops.conv2d.unset_weights_stdev()
+    lib.ops.deconv2d.unset_weights_stdev()
+    lib.ops.linear.unset_weights_stdev()
+
+    return tf.reshape(output, [-1])
+
 
 Generator, Discriminator = GeneratorAndDiscriminator()
 
 with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
 
-    all_real_data_conv = tf.placeholder(tf.int32, shape=[BATCH_SIZE, 3, 64, 64])
+    all_real_data_conv = tf.placeholder(tf.int32, shape=[BATCH_SIZE, 3, TARGET_SIZE, TARGET_SIZE])
     if tf.__version__.startswith('1.'):
         split_real_data_conv = tf.split(all_real_data_conv, len(DEVICES))
     else:
@@ -486,12 +576,13 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
     def generate_image(iteration):
         samples = session.run(all_fixed_noise_samples)
         samples = ((samples+1.)*(255.99/2)).astype('int32')
-        lib.save_images.save_images(samples.reshape((BATCH_SIZE, 3, 64, 64)), 'samples/{}/samples_{}.png'.format(EXP_NAME, iteration))
+        lib.save_images.save_images(samples.reshape((BATCH_SIZE, 3, TARGET_SIZE, TARGET_SIZE)), 'samples/{}/samples_{}.png'.format(EXP_NAME, iteration))
 
+    saver = tf.train.Saver()
 
     # Dataset iterator
     #train_gen, dev_gen = lib.small_imagenet.load(BATCH_SIZE, data_dir=DATA_DIR)
-    train_gen, dev_gen = lib.web_oneclass.load(CLASSNAME, image_size=64, batch_size= BATCH_SIZE)
+    train_gen, dev_gen = lib.web_oneclass.load(CLASSNAME, image_size=TARGET_SIZE, batch_size= BATCH_SIZE)
 
     def inf_train_gen():
         while True:
@@ -502,7 +593,7 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
     _x = next(inf_train_gen())
     _x_r = session.run(real_data, feed_dict={real_data_conv: _x})
     _x_r = ((_x_r+1.)*(255.99/2)).astype('int32')
-    lib.save_images.save_images(_x_r.reshape((BATCH_SIZE, 3, 64, 64)), 'samples/{}/samples_groundtruth.png'.format(EXP_NAME))
+    lib.save_images.save_images(_x_r.reshape((BATCH_SIZE, 3, TARGET_SIZE, TARGET_SIZE)), 'samples/{}/samples_groundtruth.png'.format(EXP_NAME))
 
 
     # Train loop
@@ -527,8 +618,8 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
             if MODE == 'wgan':
                 _ = session.run([clip_disc_weights])
 
-        lib.plot.plot('train disc cost', _disc_cost)
-        lib.plot.plot('time', time.time() - start_time)
+        lib.plot.plot('samples/{}/train disc cost'.format(EXP_NAME), _disc_cost)
+        lib.plot.plot('samples/{}/time'.format(EXP_NAME), time.time() - start_time)
 
         if iteration % 200 == 199:
             t = time.time()
@@ -536,11 +627,14 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
             for (images,) in dev_gen():
                 _dev_disc_cost = session.run(disc_cost, feed_dict={all_real_data_conv: _data}) 
                 dev_disc_costs.append(_dev_disc_cost)
-            lib.plot.plot('dev disc cost', np.mean(dev_disc_costs))
+            lib.plot.plot('samples/{}/dev disc cost'.format(EXP_NAME), np.mean(dev_disc_costs))
 
             generate_image(iteration)
 
         if (iteration < 5) or (iteration % 200 == 199):
-            lib.plot.flush()
+            lib.plot.flush('samples/{}/'.format(EXP_NAME))
 
+        if iteration % 10000 == 0:
+            saver.save(session, 'models/{}/model.ckpt'.format(EXP_NAME), global_step=iteration)
+		
         lib.plot.tick()

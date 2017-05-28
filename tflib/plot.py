@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import collections
 import time
 import pickle as pickle
+import os
 
 _since_beginning = collections.defaultdict(lambda: {})
 _since_last_flush = collections.defaultdict(lambda: {})
@@ -18,7 +19,7 @@ def tick():
 def plot(name, value):
 	_since_last_flush[name][_iter[0]] = value
 
-def flush():
+def flush(log_dir):
 	prints = []
 
 	for name, vals in _since_last_flush.items():
@@ -37,5 +38,5 @@ def flush():
 	print("iter {}\t{}".format(_iter[0], "\t".join(prints)))
 	_since_last_flush.clear()
 
-	with open('log.pkl', 'wb') as f:
+	with open(os.path.join(log_dir, 'log.pkl'), 'wb') as f:
 		pickle.dump(dict(_since_beginning), f)
