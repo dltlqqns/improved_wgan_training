@@ -1,0 +1,2 @@
+SET CUDA_VISIBLE_DEVICES=3
+python gan_64x64.py

@@ -18,6 +18,7 @@ import tflib.save_images
 import tflib.web_oneclass
 import tflib.ops.layernorm
 import tflib.plot
+import os
 
 # Download 64x64 ImageNet at http://image-net.org/small/download.php and
 # fill in the path to the extracted files here!
@@ -33,7 +34,11 @@ BATCH_SIZE = 64 # Batch size. Must be a multiple of N_GPUS
 ITERS = 200000 # How many iterations to train for
 LAMBDA = 10 # Gradient penalty lambda hyperparameter
 OUTPUT_DIM = 64*64*3 # Number of pixels in each iamge
-CLASSNAME = 'horse'
+CLASSNAME = 'truck'
+ARCH = 'ResNet' #'DCGAN'
+EXP_NAME = '{}_{}_{}'.format(ARCH, MODE, CLASSNAME)
+if not os.path.exists('samples/{}'.format(EXP_NAME)):
+	os.mkdir('samples/{}'.format(EXP_NAME))
 
 lib.print_model_settings(locals().copy())
 
@@ -44,7 +49,7 @@ def GeneratorAndDiscriminator():
     """
 
     # Baseline (G: DCGAN, D: DCGAN)
-    return DCGANGenerator, DCGANDiscriminator
+    #return DCGANGenerator, DCGANDiscriminator
 
     # No BN and constant number of filts in G
     # return WGANPaper_CrippledDCGANGenerator, DCGANDiscriminator
@@ -63,11 +68,11 @@ def GeneratorAndDiscriminator():
     #        functools.partial(DCGANDiscriminator, bn=True, nonlinearity=tf.tanh)
 
     # 101-layer ResNet G and D
-    # return ResnetGenerator, ResnetDiscriminator
+    return ResnetGenerator, ResnetDiscriminator
 
     raise Exception('You must choose an architecture!')
 
-DEVICES = ['/gpu:{}'.format(i) for i in xrange(N_GPUS)]
+DEVICES = ['/gpu:{}'.format(i) for i in range(N_GPUS)]
 
 def LeakyReLU(x, alpha=0.2):
     return tf.maximum(alpha*x, x)
@@ -105,19 +110,19 @@ def ResidualBlock(name, input_dim, output_dim, filter_size, inputs, resample=Non
     """
     if resample=='down':
         conv_shortcut = functools.partial(lib.ops.conv2d.Conv2D, stride=2)
-        conv_1        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=input_dim, output_dim=input_dim/2)
-        conv_1b       = functools.partial(lib.ops.conv2d.Conv2D, input_dim=input_dim/2, output_dim=output_dim/2, stride=2)
-        conv_2        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=output_dim/2, output_dim=output_dim)
+        conv_1        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=input_dim, output_dim=int(input_dim/2))
+        conv_1b       = functools.partial(lib.ops.conv2d.Conv2D, input_dim=int(input_dim/2), output_dim=int(output_dim/2), stride=2)
+        conv_2        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=int(output_dim/2), output_dim=output_dim)
     elif resample=='up':
         conv_shortcut = SubpixelConv2D
-        conv_1        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=input_dim, output_dim=input_dim/2)
-        conv_1b       = functools.partial(lib.ops.deconv2d.Deconv2D, input_dim=input_dim/2, output_dim=output_dim/2)
-        conv_2        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=output_dim/2, output_dim=output_dim)
+        conv_1        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=input_dim, output_dim=int(input_dim/2))
+        conv_1b       = functools.partial(lib.ops.deconv2d.Deconv2D, input_dim=int(input_dim/2), output_dim=int(output_dim/2))
+        conv_2        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=int(output_dim/2), output_dim=output_dim)
     elif resample==None:
         conv_shortcut = lib.ops.conv2d.Conv2D
-        conv_1        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=input_dim,  output_dim=input_dim/2)
-        conv_1b       = functools.partial(lib.ops.conv2d.Conv2D, input_dim=input_dim/2,  output_dim=output_dim/2)
-        conv_2        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=input_dim/2, output_dim=output_dim)
+        conv_1        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=input_dim,  output_dim=int(input_dim/2))
+        conv_1b       = functools.partial(lib.ops.conv2d.Conv2D, input_dim=int(input_dim/2),  output_dim=int(output_dim/2))
+        conv_2        = functools.partial(lib.ops.conv2d.Conv2D, input_dim=int(input_dim/2), output_dim=output_dim)
 
     else:
         raise Exception('invalid resample value')
@@ -222,19 +227,19 @@ def ResnetGenerator(n_samples, noise=None, dim=DIM):
     output = lib.ops.linear.Linear('Generator.Input', 128, 4*4*8*dim, noise)
     output = tf.reshape(output, [-1, 8*dim, 4, 4])
 
-    for i in xrange(6):
+    for i in range(6):
         output = ResidualBlock('Generator.4x4_{}'.format(i), 8*dim, 8*dim, 3, output, resample=None)
     output = ResidualBlock('Generator.Up1', 8*dim, 4*dim, 3, output, resample='up')
-    for i in xrange(6):
+    for i in range(6):
         output = ResidualBlock('Generator.8x8_{}'.format(i), 4*dim, 4*dim, 3, output, resample=None)
     output = ResidualBlock('Generator.Up2', 4*dim, 2*dim, 3, output, resample='up')
-    for i in xrange(6):
+    for i in range(6):
         output = ResidualBlock('Generator.16x16_{}'.format(i), 2*dim, 2*dim, 3, output, resample=None)
     output = ResidualBlock('Generator.Up3', 2*dim, 1*dim, 3, output, resample='up')
-    for i in xrange(6):
+    for i in range(6):
         output = ResidualBlock('Generator.32x32_{}'.format(i), 1*dim, 1*dim, 3, output, resample=None)
     output = ResidualBlock('Generator.Up4', 1*dim, dim/2, 3, output, resample='up')
-    for i in xrange(5):
+    for i in range(5):
         output = ResidualBlock('Generator.64x64_{}'.format(i), dim/2, dim/2, 3, output, resample=None)
 
     output = lib.ops.conv2d.Conv2D('Generator.Out', dim/2, 3, 1, output, he_init=False)
@@ -306,19 +311,19 @@ def ResnetDiscriminator(inputs, dim=DIM):
     output = tf.reshape(inputs, [-1, 3, 64, 64])
     output = lib.ops.conv2d.Conv2D('Discriminator.In', 3, dim/2, 1, output, he_init=False)
 
-    for i in xrange(5):
+    for i in range(5):
         output = ResidualBlock('Discriminator.64x64_{}'.format(i), dim/2, dim/2, 3, output, resample=None)
     output = ResidualBlock('Discriminator.Down1', dim/2, dim*1, 3, output, resample='down')
-    for i in xrange(6):
+    for i in range(6):
         output = ResidualBlock('Discriminator.32x32_{}'.format(i), dim*1, dim*1, 3, output, resample=None)
     output = ResidualBlock('Discriminator.Down2', dim*1, dim*2, 3, output, resample='down')
-    for i in xrange(6):
+    for i in range(6):
         output = ResidualBlock('Discriminator.16x16_{}'.format(i), dim*2, dim*2, 3, output, resample=None)
     output = ResidualBlock('Discriminator.Down3', dim*2, dim*4, 3, output, resample='down')
-    for i in xrange(6):
+    for i in range(6):
         output = ResidualBlock('Discriminator.8x8_{}'.format(i), dim*4, dim*4, 3, output, resample=None)
     output = ResidualBlock('Discriminator.Down4', dim*4, dim*8, 3, output, resample='down')
-    for i in xrange(6):
+    for i in range(6):
         output = ResidualBlock('Discriminator.4x4_{}'.format(i), dim*8, dim*8, 3, output, resample=None)
 
     output = tf.reshape(output, [-1, 4*4*8*dim])
@@ -329,7 +334,7 @@ def ResnetDiscriminator(inputs, dim=DIM):
 
 def FCDiscriminator(inputs, FC_DIM=512, n_layers=3):
     output = LeakyReLULayer('Discriminator.Input', OUTPUT_DIM, FC_DIM, inputs)
-    for i in xrange(n_layers):
+    for i in range(n_layers):
         output = LeakyReLULayer('Discriminator.{}'.format(i), FC_DIM, FC_DIM, output)
     output = lib.ops.linear.Linear('Discriminator.Out', FC_DIM, 1, output)
 
@@ -382,9 +387,8 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
 
     for device_index, (device, real_data_conv) in enumerate(zip(DEVICES, split_real_data_conv)):
         with tf.device(device):
-
-            real_data = tf.reshape(2*((tf.cast(real_data_conv, tf.float32)/255.)-.5), [BATCH_SIZE/len(DEVICES), OUTPUT_DIM])
-            fake_data = Generator(BATCH_SIZE/len(DEVICES))
+            real_data = tf.reshape(2*((tf.cast(real_data_conv, tf.float32)/255.)-.5), [int(BATCH_SIZE/len(DEVICES)), OUTPUT_DIM])
+            fake_data = Generator(int(BATCH_SIZE/len(DEVICES)))
 
             disc_real = Discriminator(real_data)
             disc_fake = Discriminator(fake_data)
@@ -398,7 +402,7 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
                 disc_cost = tf.reduce_mean(disc_fake) - tf.reduce_mean(disc_real)
 
                 alpha = tf.random_uniform(
-                    shape=[BATCH_SIZE/len(DEVICES),1], 
+                    shape=[int(BATCH_SIZE/len(DEVICES)),1], 
                     minval=0.,
                     maxval=1.
                 )
@@ -473,7 +477,7 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
     fixed_noise = tf.constant(np.random.normal(size=(BATCH_SIZE, 128)).astype('float32'))
     all_fixed_noise_samples = []
     for device_index, device in enumerate(DEVICES):
-        n_samples = BATCH_SIZE / len(DEVICES)
+        n_samples = int(BATCH_SIZE / len(DEVICES))
         all_fixed_noise_samples.append(Generator(n_samples, noise=fixed_noise[device_index*n_samples:(device_index+1)*n_samples]))
     if tf.__version__.startswith('1.'):
         all_fixed_noise_samples = tf.concat(all_fixed_noise_samples, axis=0)
@@ -482,7 +486,7 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
     def generate_image(iteration):
         samples = session.run(all_fixed_noise_samples)
         samples = ((samples+1.)*(255.99/2)).astype('int32')
-        lib.save_images.save_images(samples.reshape((BATCH_SIZE, 3, 64, 64)), 'samples_{}.png'.format(iteration))
+        lib.save_images.save_images(samples.reshape((BATCH_SIZE, 3, 64, 64)), 'samples/{}/samples_{}.png'.format(EXP_NAME, iteration))
 
 
     # Dataset iterator
@@ -495,16 +499,16 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
                 yield images
 
     # Save a batch of ground-truth samples
-    _x = inf_train_gen().next()
+    _x = next(inf_train_gen())
     _x_r = session.run(real_data, feed_dict={real_data_conv: _x})
     _x_r = ((_x_r+1.)*(255.99/2)).astype('int32')
-    lib.save_images.save_images(_x_r.reshape((BATCH_SIZE, 3, 64, 64)), 'samples_groundtruth.png')
+    lib.save_images.save_images(_x_r.reshape((BATCH_SIZE, 3, 64, 64)), 'samples/{}/samples_groundtruth.png'.format(EXP_NAME))
 
 
     # Train loop
     session.run(tf.initialize_all_variables())
     gen = inf_train_gen()
-    for iteration in xrange(ITERS):
+    for iteration in range(ITERS):
 
         start_time = time.time()
 
@@ -517,8 +521,8 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
             disc_iters = 1
         else:
             disc_iters = CRITIC_ITERS
-        for i in xrange(disc_iters):
-            _data = gen.next()
+        for i in range(disc_iters):
+            _data = next(gen)
             _disc_cost, _ = session.run([disc_cost, disc_train_op], feed_dict={all_real_data_conv: _data})
             if MODE == 'wgan':
                 _ = session.run([clip_disc_weights])
