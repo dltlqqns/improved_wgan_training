@@ -196,6 +196,7 @@ def DCGANGenerator(n_samples, noise=None, dim=DIM, bn=True, nonlinearity=tf.nn.r
 
     return tf.reshape(output, [-1, OUTPUT_DIM])
 
+"""
 def BEGANGenerator(n_samples, noise=None, dim=DIM, nonlinearity=tf.nn.elu):
     if noise is None:
         noise = tf.random_normal([n_samples, 128])
@@ -213,6 +214,7 @@ def BEGANGenerator(n_samples, noise=None, dim=DIM, nonlinearity=tf.nn.elu):
     output = tf.tanh(output) ???
 
     return tf.reshape(output, [-1, OUTPUT_DIM])
+"""
 
 def WGANPaper_CrippledDCGANGenerator(n_samples, noise=None, dim=DIM):
     if noise is None:
