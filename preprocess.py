@@ -52,11 +52,18 @@ def convert_dataset_pickle(root_dir, dataset, classname, img_size):
             img = img.astype('uint8')
             img = scipy.misc.imresize(img, [img_size, img_size], 'bicubic')
             imgs.append(img)
-    
+
+    # train/val division
+    outfile = os.path.join(out_dir, '%dimages_%s_trainval.pickle'%(img_size, classname))
+    randperm = np.random.permutation(len(imgs))
+    num_train = int(np.floor(len(imgs)*0.9))
+    train = randperm[:num_train]
+    val = randperm[num_train:]
     # Save images to .pickle
     outfile = os.path.join(out_dir, '%dimages_%s.pickle'%(img_size, classname))
     with open(outfile, 'wb') as f_out:
-        pickle.dump(imgs, f_out)
+        pickle.dump({'data': imgs, 'train': train, 'val': val}, f_out)
+    
 
 if __name__ == '__main__':
     convert_dataset_pickle(ROOT_DIR, DATASET, CLASSNAME, IMG_SIZE)
