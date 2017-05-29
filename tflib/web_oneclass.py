@@ -4,12 +4,14 @@ import numpy as np
 import pickle
 import time
 
-def make_generator(classname, image_size, batch_size):
+def make_generator(classname, image_size, batch_size, mode):
     # filepath = '/home/yumin/codes/dcgan_code/Data/web1000/%dimages_%s.pickle'%(image_size, classname)
     filepath = 'D:/v-yusuh/dataset/web1000/%dimages_%s.pickle'%(image_size, classname)
     with open(filepath, 'rb') as f:
-        images = pickle.load(f, encoding='latin1') # list. images[i]: (h, w, 3)
+        tmp = pickle.load(f, encoding='latin1') # list. images[i]: (h, w, 3)
+    images, sel = tmp['data'], np.array([int(v) for v in tmp[mode]])
     images = np.array(images).transpose(0,3,1,2)   # (nbatch, 3*h*w)
+    images = images[sel,:,:,:]
     print(images.shape)
 
     def get_epoch():
@@ -20,8 +22,8 @@ def make_generator(classname, image_size, batch_size):
 
 def load(classname, batch_size=64, image_size=64):
     return (
-        make_generator(classname, image_size, batch_size),
-        make_generator(classname, image_size, batch_size)
+        make_generator(classname, image_size, batch_size, 'train'),
+        make_generator(classname, image_size, batch_size, 'val')
     )
 
 if __name__ == '__main__':
