@@ -36,8 +36,9 @@ LAMBDA = 10 # Gradient penalty lambda hyperparameter
 TARGET_SIZE = 128
 OUTPUT_DIM = TARGET_SIZE*TARGET_SIZE*3 # Number of pixels in each iamge
 CLASSNAME = 'horse'
-ARCH = 'DCGAN128' #'ResNet' #
-EXP_NAME = '{}_{}_{}'.format(ARCH, MODE, CLASSNAME)
+ARCH = 'DCGAN' #'ResNet' #
+MSG = 'hidden32'
+EXP_NAME = '{}{}_{}_{}_M{}'.format(ARCH, TARGET_SIZE, MODE, CLASSNAME, MSG)
 if not os.path.exists('samples/{}'.format(EXP_NAME)):
 	os.mkdir('samples/{}'.format(EXP_NAME))
 if not os.path.exists('models/{}'.format(EXP_NAME)):
@@ -55,8 +56,14 @@ def GeneratorAndDiscriminator():
     #return DCGANGenerator, DCGANDiscriminator
 
     # Baseline 128 (G: DCGAN, D: DCGAN)
-    return DCGANGenerator_128, DCGANDiscriminator_128
+    #return DCGANGenerator_128, DCGANDiscriminator_128
+
+    # Baseline (G: DCGAN, D: DCGAN) no critic BN
+    #return DCGANGenerator, functools.partial(DCGANDiscriminator, bn=False)
 	
+    # Baseline 128 (G: DCGAN, D: DCGAN) no critic BN
+    return DCGANGenerator_128, functools.partial(DCGANDiscriminator_128, bn=False)
+
     # No BN and constant number of filts in G
     # return WGANPaper_CrippledDCGANGenerator, DCGANDiscriminator
 
