@@ -44,10 +44,10 @@ def GeneratorAndDiscriminator():
     """
 
     # Baseline (G: DCGAN, D: DCGAN)
-    return DCGANGenerator, DCGANDiscriminator
+    #return DCGANGenerator, DCGANDiscriminator
 
     # No BN and constant number of filts in G
-    # return WGANPaper_CrippledDCGANGenerator, DCGANDiscriminator
+    return WGANPaper_CrippledDCGANGenerator, DCGANDiscriminator
 
     # 512-dim 4-layer ReLU MLP G
     # return FCGenerator, DCGANDiscriminator
@@ -64,6 +64,9 @@ def GeneratorAndDiscriminator():
 
     # 101-layer ResNet G and D
     # return ResnetGenerator, ResnetDiscriminator
+
+    # BEGAN-like generator
+    return BEGANGenerator, DCGANDiscriminator
 
     raise Exception('You must choose an architecture!')
 
@@ -190,6 +193,24 @@ def DCGANGenerator(n_samples, noise=None, dim=DIM, bn=True, nonlinearity=tf.nn.r
     lib.ops.conv2d.unset_weights_stdev()
     lib.ops.deconv2d.unset_weights_stdev()
     lib.ops.linear.unset_weights_stdev()
+
+    return tf.reshape(output, [-1, OUTPUT_DIM])
+
+def BEGANGenerator(n_samples, noise=None, dim=DIM, nonlinearity=tf.nn.elu):
+    if noise is None:
+        noise = tf.random_normal([n_samples, 128])
+
+    output = lib.ops.linear.Linear('Generator.Input', 128, 4*4*dim, noise)
+    output = tf.reshape(output, [-1, 8*dim, 4, 4]) 
+
+    output = conv2d()
+    output = nonlinearity(ouput)
+    output = conv2d()
+    output = nonlinearity(ouput)
+    output = upscale()
+
+    output = conv2d()
+    output = tf.tanh(output) ???
 
     return tf.reshape(output, [-1, OUTPUT_DIM])
 
