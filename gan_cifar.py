@@ -12,7 +12,7 @@ import tflib.ops.conv2d
 import tflib.ops.batchnorm
 import tflib.ops.deconv2d
 import tflib.save_images
-import tflib.cifar10
+import tflib.cifar10_oneclass
 import tflib.inception_score
 import tflib.plot
 
@@ -168,7 +168,7 @@ def get_inception_score():
     return lib.inception_score.get_inception_score(list(all_samples))
 
 # Dataset iterators
-train_gen, dev_gen = lib.cifar10.load(BATCH_SIZE, data_dir=DATA_DIR)
+train_gen, dev_gen = lib.cifar10_oneclass.load('horse', BATCH_SIZE, data_dir=DATA_DIR)
 def inf_train_gen():
     while True:
         for images in train_gen():
