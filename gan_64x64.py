@@ -36,7 +36,7 @@ LAMBDA = 10 # Gradient penalty lambda hyperparameter
 TARGET_SIZE = 128
 OUTPUT_DIM = TARGET_SIZE*TARGET_SIZE*3 # Number of pixels in each iamge
 CLASSNAME = 'horse'
-ARCH = 'DCGAN' #'ResNet' #
+ARCH = 'BEGAN' #'ResNet' #
 MSG = 'hidden32'
 EXP_NAME = '{}{}_{}_{}_M{}'.format(ARCH, TARGET_SIZE, MODE, CLASSNAME, MSG)
 if not os.path.exists('samples/{}'.format(EXP_NAME)):
@@ -62,7 +62,10 @@ def GeneratorAndDiscriminator():
     #return DCGANGenerator, functools.partial(DCGANDiscriminator, bn=False)
 	
     # Baseline 128 (G: DCGAN, D: DCGAN) no critic BN
-    return DCGANGenerator_128, functools.partial(DCGANDiscriminator_128, bn=False)
+    #return DCGANGenerator_128, functools.partial(DCGANDiscriminator_128, bn=False)
+
+    # BEGAN
+    return BEGANGenerator, functools.partial(DCGANDiscriminator_128, bn=False)
 
     # No BN and constant number of filts in G
     # return WGANPaper_CrippledDCGANGenerator, DCGANDiscriminator
@@ -277,6 +280,34 @@ def WGANPaper_CrippledDCGANGenerator(n_samples, noise=None, dim=DIM):
 
     return tf.reshape(output, [-1, OUTPUT_DIM])
 
+def nchw_to_nhwc(x):
+    return tf.transpose(x, [0,2,3,1])
+def nhwc_to_nchw(x):
+    return tf.transpose(x, [0,3,1,2])
+def BEGANGenerator(n_samples, noise=None, dim=DIM):
+    if noise is None:
+        noise = tf.random_normal([n_samples, 128])
+
+    output = lib.ops.linear.Linear('Generator.Input', 128, 8*8*dim, noise)
+    output = tf.reshape(output, [-1, dim, 8, 8])
+
+    repeat_num = int(np.log2(TARGET_SIZE/8)) + 1
+    curr_shape = 8
+    for idx in range(repeat_num):
+        output = lib.ops.conv2d.Conv2D('Generator.{}a'.format(idx+2), dim, dim, 3, output, stride=1)
+        output = tf.nn.elu(output)
+        output = lib.ops.conv2d.Conv2D('Generator.{}b'.format(idx+2), dim, dim, 3, output, stride=1)
+        output = tf.nn.elu(output)
+        if idx < repeat_num - 1:
+            output = nchw_to_nhwc(output)
+            output = tf.image.resize_nearest_neighbor(output, (curr_shape*2, curr_shape*2))
+            output = nhwc_to_nchw(output)
+            curr_shape = curr_shape * 2
+    print(curr_shape)
+
+    output = lib.ops.conv2d.Conv2D('Generator.{}'.format(repeat_num+2), dim, 3, 3, output)
+
+    return tf.reshape(output, [-1, OUTPUT_DIM])
 def ResnetGenerator(n_samples, noise=None, dim=DIM):
     if noise is None:
         noise = tf.random_normal([n_samples, 128])
