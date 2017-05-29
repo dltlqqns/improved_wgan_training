@@ -578,7 +578,7 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
         samples = ((samples+1.)*(255.99/2)).astype('int32')
         lib.save_images.save_images(samples.reshape((BATCH_SIZE, 3, TARGET_SIZE, TARGET_SIZE)), 'samples/{}/samples_{}.png'.format(EXP_NAME, iteration))
 
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(tf.global_variables())
 
     # Dataset iterator
     #train_gen, dev_gen = lib.small_imagenet.load(BATCH_SIZE, data_dir=DATA_DIR)
