@@ -43,6 +43,8 @@ if not os.path.exists('samples/{}'.format(EXP_NAME)):
 	os.mkdir('samples/{}'.format(EXP_NAME))
 if not os.path.exists('models/{}'.format(EXP_NAME)):
 	os.mkdir('models/{}'.format(EXP_NAME))
+LOAD_ITER = 100000
+LOAD_PATH = 'models/{}/model.ckpt-{}'.format(EXP_NAME, LOAD_ITER)
 
 lib.print_model_settings(locals().copy())
 
@@ -636,9 +638,13 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
 
 
     # Train loop
-    session.run(tf.initialize_all_variables())
+    if LOAD_ITER == 0:
+        session.run(tf.initialize_all_variables())
+    else:
+        saver.restore(session, LOAD_PATH)
+        print('loaded model from {}'.format(LOAD_PATH))
     gen = inf_train_gen()
-    for iteration in range(ITERS):
+    for iteration in range(LOAD_ITER, ITERS):
 
         start_time = time.time()
 
