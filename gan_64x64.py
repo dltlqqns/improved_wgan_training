@@ -295,9 +295,9 @@ def BEGANGenerator(n_samples, noise=None, dim=DIM):
     curr_shape = 8
     for idx in range(repeat_num):
         output = lib.ops.conv2d.Conv2D('Generator.{}a'.format(idx+2), dim, dim, 3, output, stride=1)
-        output = tf.nn.elu(output)
+        output = LeakyReLU(output)
         output = lib.ops.conv2d.Conv2D('Generator.{}b'.format(idx+2), dim, dim, 3, output, stride=1)
-        output = tf.nn.elu(output)
+        output = LeakyReLU(output)
         if idx < repeat_num - 1:
             output = nchw_to_nhwc(output)
             output = tf.image.resize_nearest_neighbor(output, (curr_shape*2, curr_shape*2))
@@ -306,6 +306,7 @@ def BEGANGenerator(n_samples, noise=None, dim=DIM):
     print(curr_shape)
 
     output = lib.ops.conv2d.Conv2D('Generator.{}'.format(repeat_num+2), dim, 3, 3, output)
+    output = tf.tanh(output)
 
     return tf.reshape(output, [-1, OUTPUT_DIM])
 def ResnetGenerator(n_samples, noise=None, dim=DIM):
