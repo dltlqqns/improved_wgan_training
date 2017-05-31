@@ -6,3 +6,4 @@ push
 *.jpg
 *.png
 models/
+.ipynb_checkpoints/
