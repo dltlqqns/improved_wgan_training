@@ -5,12 +5,13 @@ import pickle
 import time
 import scipy.misc
 import platform
+import os
 
-def make_generator(classname, image_size, batch_size, mode):
-    if 'linux' in platform.platform().lower():
-        filepath = '/home/yumin/dataset/web1000/%dimages_%s.pickle'%(image_size, classname)
-    else:
-        filepath = 'D:/v-yusuh/dataset/web1000/%dimages_%s.pickle'%(image_size, classname)
+def make_generator(data_dir, classname, image_size, batch_size, mode, is_crop=True):
+    filename = '%dimages_%s'%(image_size, classname)
+    if is_crop:
+        filename = '%s_crop'%filename
+    filepath = os.path.join(data_dir, '%s.pickle'%filename)
     with open(filepath, 'rb') as f:
         tmp = pickle.load(f, encoding='latin1') # list. images[i]: (h, w, 3)
     images, sel = tmp['data'], np.array([int(v) for v in tmp[mode]])
@@ -48,10 +49,10 @@ def make_generator(classname, image_size, batch_size, mode):
             yield (imgs_aug, )
     return get_epoch
 
-def load(classname, batch_size=64, image_size=64):
+def load(data_dir, classname, batch_size=64, image_size=64, is_crop=True):
     return (
-        make_generator(classname, image_size, batch_size, 'train'),
-        make_generator(classname, image_size, batch_size, 'val')
+        make_generator(data_dir, classname, image_size, batch_size, 'train', is_crop=is_crop),
+        make_generator(data_dir, classname, image_size, batch_size, 'val', is_crop=is_crop)
     )
 
 if __name__ == '__main__':

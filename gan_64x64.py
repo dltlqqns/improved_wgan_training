@@ -15,7 +15,7 @@ import tflib.ops.batchnorm
 import tflib.ops.deconv2d
 import tflib.save_images
 #import tflib.small_imagenet
-import tflib.web_oneclass
+import tflib.oneclass
 import tflib.ops.layernorm
 import tflib.plot
 import os
@@ -33,18 +33,20 @@ N_GPUS = 1 # Number of GPUs
 BATCH_SIZE = 64 # Batch size. Must be a multiple of N_GPUS
 ITERS = 200000 # How many iterations to train for
 LAMBDA = 10 # Gradient penalty lambda hyperparameter
-TARGET_SIZE = 128
+TARGET_SIZE = 64
 OUTPUT_DIM = TARGET_SIZE*TARGET_SIZE*3 # Number of pixels in each iamge
-CLASSNAME = 'horse'
-ARCH = 'BEGAN' #'ResNet' #
-MSG = 'hidden32'
+CLASSNAME = '' #'truck'
+ARCH = 'WGAN' #'ResNet' #
+MSG = 'CUB_hidden32'
 EXP_NAME = '{}{}_{}_{}_M{}'.format(ARCH, TARGET_SIZE, MODE, CLASSNAME, MSG)
 if not os.path.exists('samples/{}'.format(EXP_NAME)):
 	os.mkdir('samples/{}'.format(EXP_NAME))
 if not os.path.exists('models/{}'.format(EXP_NAME)):
 	os.mkdir('models/{}'.format(EXP_NAME))
-LOAD_ITER = 100000
+LOAD_ITER = 0 #100000
 LOAD_PATH = 'models/{}/model.ckpt-{}'.format(EXP_NAME, LOAD_ITER)
+DATA_DIR = 'data/CUB_200_2011'
+IS_CROP = True
 
 lib.print_model_settings(locals().copy())
 
@@ -61,13 +63,13 @@ def GeneratorAndDiscriminator():
     #return DCGANGenerator_128, DCGANDiscriminator_128
 
     # Baseline (G: DCGAN, D: DCGAN) no critic BN
-    #return DCGANGenerator, functools.partial(DCGANDiscriminator, bn=False)
+    return DCGANGenerator, functools.partial(DCGANDiscriminator, bn=False)
 	
     # Baseline 128 (G: DCGAN, D: DCGAN) no critic BN
     #return DCGANGenerator_128, functools.partial(DCGANDiscriminator_128, bn=False)
 
     # BEGAN
-    return BEGANGenerator, functools.partial(DCGANDiscriminator_128, bn=False)
+    #return BEGANGenerator, functools.partial(DCGANDiscriminator_128, bn=False)
 
     # No BN and constant number of filts in G
     # return WGANPaper_CrippledDCGANGenerator, DCGANDiscriminator
@@ -623,7 +625,7 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
 
     # Dataset iterator
     #train_gen, dev_gen = lib.small_imagenet.load(BATCH_SIZE, data_dir=DATA_DIR)
-    train_gen, dev_gen = lib.web_oneclass.load(CLASSNAME, image_size=TARGET_SIZE, batch_size= BATCH_SIZE)
+    train_gen, dev_gen = lib.oneclass.load(DATA_DIR, CLASSNAME, image_size=TARGET_SIZE, batch_size= BATCH_SIZE, is_crop=IS_CROP)
 
     def inf_train_gen():
         while True:

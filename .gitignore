@@ -7,3 +7,5 @@ push
 *.png
 models/
 .ipynb_checkpoints/
+data/
+*.swp
