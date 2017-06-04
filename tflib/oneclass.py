@@ -8,7 +8,7 @@ import platform
 import os
 
 def make_generator(data_dir, classname, image_size, batch_size, mode, is_crop=True):
-    filename = '%dimages_%s'%(image_size, classname)
+    filename = 'medium_%dimages_%s'%(image_size, classname)
     if is_crop:
         filename = '%s_crop'%filename
     filepath = os.path.join(data_dir, '%s.pickle'%filename)

@@ -11,7 +11,7 @@ import pandas as pd
 
 DATASET = 'CUB_200_2011' #'web1000'
 CLASSNAME = '' #'truck'
-IS_CROP = False #True
+IS_CROP = True #True
 IMG_SIZE = 64 #128 
 CIFAR_CLASSES = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 if platform.system()=='Linux':
@@ -101,14 +101,15 @@ def convert_dataset_pickle(root_dir, dataset, classname, img_size):
 
     # train/val division
     randperm = np.random.permutation(len(imgs))
-    num_train = int(np.floor(len(imgs)*0.9))
+    num_use = 3000 #len(imgs)
+    num_train = int(np.floor(num_use*0.9))
     train = randperm[:num_train]
-    val = randperm[num_train:]
+    val = randperm[num_train:num_use]
     # Save images to .pickle
     if IS_CROP:
-        outfile = os.path.join(out_dir, '%dimages_%s_crop.pickle'%(img_size, classname))
+        outfile = os.path.join(out_dir, 'medium_%dimages_%s_crop.pickle'%(img_size, classname))
     else:
-        outfile = os.path.join(out_dir, '%dimages_%s.pickle'%(img_size, classname))
+        outfile = os.path.join(out_dir, 'medium_%dimages_%s.pickle'%(img_size, classname))
     with open(outfile, 'wb') as f_out:
         pickle.dump({'data': imgs, 'train': train, 'val': val}, f_out)
     

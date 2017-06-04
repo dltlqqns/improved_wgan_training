@@ -37,7 +37,7 @@ TARGET_SIZE = 64
 OUTPUT_DIM = TARGET_SIZE*TARGET_SIZE*3 # Number of pixels in each iamge
 CLASSNAME = '' #'truck'
 ARCH = 'WGAN' #'ResNet' #
-MSG = 'CUB_hidden32'
+MSG = 'CUBcrop_medium_hidden32'
 EXP_NAME = '{}{}_{}_{}_M{}'.format(ARCH, TARGET_SIZE, MODE, CLASSNAME, MSG)
 if not os.path.exists('samples/{}'.format(EXP_NAME)):
 	os.mkdir('samples/{}'.format(EXP_NAME))
