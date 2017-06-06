@@ -4,13 +4,13 @@ import os
 import glob
 import scipy.misc
 import pickle
-from utils import mkdir_p, get_image
+from utils import mkdir_p, get_image, colorize
 import numpy as np
 import platform
 import pandas as pd
 
-DATASET = 'CUB_200_2011' #'web1000'
-CLASSNAME = '' #'truck'
+DATASET = 'web_combined' #'CUB_200_2011' #'web1000'
+CLASSNAME = 'horse' #'' #'truck'
 IS_CROP = False #True
 IMG_SIZE = 64 #128 
 CIFAR_CLASSES = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
@@ -76,6 +76,7 @@ def convert_dataset_pickle(root_dir, dataset, classname, img_size):
         imgs = []
         for filename in filenames:
             img = scipy.misc.imread(filename)
+            img = colorize(img)
             img = img.astype('uint8')
             img = scipy.misc.imresize(img, [img_size, img_size], 'bicubic')
             imgs.append(img)
