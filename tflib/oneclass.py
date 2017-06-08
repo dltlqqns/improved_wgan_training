@@ -7,13 +7,16 @@ import scipy.misc
 import platform
 import os
 
-def make_generator(data_dir, classname, image_size, batch_size, mode, is_crop=True):
+def make_generator(data_dir, classname, image_size, batch_size, mode, is_crop=True, add_noise=False, num_noise=0):
     filename = '%dimages_%s'%(image_size, classname)
     if is_crop:
         filename = '%s_crop'%filename
+    if add_noise:
+        filename = '%sN%d'%(filename, num_noise)
     filepath = os.path.join(data_dir, '%s.pickle'%filename)
     with open(filepath, 'rb') as f:
         tmp = pickle.load(f, encoding='latin1') # list. images[i]: (h, w, 3)
+    print("loaded file from %s"%filename)
     images, sel = tmp['data'], np.array([int(v) for v in tmp[mode]])
     images = np.array(images).transpose(0,3,1,2)   # (nbatch, 3*h*w)
     images = images[sel,:,:,:]
@@ -49,10 +52,10 @@ def make_generator(data_dir, classname, image_size, batch_size, mode, is_crop=Tr
             yield (imgs_aug, )
     return get_epoch
 
-def load(data_dir, classname, batch_size=64, image_size=64, is_crop=True):
+def load(data_dir, classname, batch_size=64, image_size=64, is_crop=True, add_noise=False, num_noise=0):
     return (
-        make_generator(data_dir, classname, image_size, batch_size, 'train', is_crop=is_crop),
-        make_generator(data_dir, classname, image_size, batch_size, 'val', is_crop=is_crop)
+        make_generator(data_dir, classname, image_size, batch_size, 'train', is_crop=is_crop, add_noise=add_noise, num_noise=num_noise),
+        make_generator(data_dir, classname, image_size, batch_size, 'val', is_crop=is_crop, add_noise=add_noise, num_noise=num_noise)
     )
 
 if __name__ == '__main__':

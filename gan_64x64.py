@@ -36,8 +36,8 @@ LAMBDA = 10 # Gradient penalty lambda hyperparameter
 TARGET_SIZE = 64
 OUTPUT_DIM = TARGET_SIZE*TARGET_SIZE*3 # Number of pixels in each iamge
 CLASSNAME = '' #'truck'
-ARCH = 'WGAN' #'ResNet' #
-MSG = 'CUB_hidden32'
+ARCH = 'WGAN' #'BEGAN' #'ResNet' #
+MSG = 'CUBcrop_N200_hidden32' #'CelebA_5000_hidden32' #'CUB_N400_hidden32'
 EXP_NAME = '{}{}_{}_{}_M{}'.format(ARCH, TARGET_SIZE, MODE, CLASSNAME, MSG)
 if not os.path.exists('samples/{}'.format(EXP_NAME)):
 	os.mkdir('samples/{}'.format(EXP_NAME))
@@ -45,8 +45,10 @@ if not os.path.exists('models/{}'.format(EXP_NAME)):
 	os.mkdir('models/{}'.format(EXP_NAME))
 LOAD_ITER = 0 #100000
 LOAD_PATH = 'models/{}/model.ckpt-{}'.format(EXP_NAME, LOAD_ITER)
-DATA_DIR = 'data/CUB_200_2011'
+DATA_DIR = 'data/CUB_200_2011' #'data/CUB_200_2011' #'data/CelebA_5000'
 IS_CROP = True
+ADD_NOISE = True
+NUM_NOISE = 200
 
 lib.print_model_settings(locals().copy())
 
@@ -69,6 +71,8 @@ def GeneratorAndDiscriminator():
     #return DCGANGenerator_128, functools.partial(DCGANDiscriminator_128, bn=False)
 
     # BEGAN
+    #return BEGANGenerator, functools.partial(DCGANDiscriminator, bn=False)
+    # BEGAN 128
     #return BEGANGenerator, functools.partial(DCGANDiscriminator_128, bn=False)
 
     # No BN and constant number of filts in G
@@ -625,7 +629,7 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as session:
 
     # Dataset iterator
     #train_gen, dev_gen = lib.small_imagenet.load(BATCH_SIZE, data_dir=DATA_DIR)
-    train_gen, dev_gen = lib.oneclass.load(DATA_DIR, CLASSNAME, image_size=TARGET_SIZE, batch_size= BATCH_SIZE, is_crop=IS_CROP)
+    train_gen, dev_gen = lib.oneclass.load(DATA_DIR, CLASSNAME, image_size=TARGET_SIZE, batch_size= BATCH_SIZE, is_crop=IS_CROP, add_noise=ADD_NOISE, num_noise=NUM_NOISE)
 
     def inf_train_gen():
         while True:

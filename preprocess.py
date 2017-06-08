@@ -4,21 +4,25 @@ import os
 import glob
 import scipy.misc
 import pickle
-from utils import mkdir_p, get_image
+from utils import mkdir_p, get_image, colorize
 import numpy as np
 import platform
 import pandas as pd
 
-DATASET = 'CUB_200_2011' #'web1000'
+DATASET = 'celebA' #'CUB_200_2011' #'celebA_5000' #'CUB_200_2011' #'web1000'
 CLASSNAME = '' #'truck'
-IS_CROP = False #True
+IS_CROP = False #False #True
 IMG_SIZE = 64 #128 
 CIFAR_CLASSES = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 if platform.system()=='Linux':
     ROOT_DIR = '/home/yumin/dataset/%s/'%DATASET
+    NOISE_DIR = 'home/yumin/dataset/101_ObjectCategories/101_ObjectCategories/BACKGROUND_Google'
 else:
     ROOT_DIR = 'D:/v-yusuh/dataset/%s/'%DATASET
+    NOISE_DIR = 'D:/v-yusuh/dataset/101_ObjectCategories/101_ObjectCategories/BACKGROUND_Google'
 OUT_DIR = 'data/%s'%DATASET
+ADD_NOISE = False
+NUM_NOISE = 200
 
 # copied from StackGAN/misc/preprocess_bird.py
 def load_bbox(data_dir):
@@ -95,9 +99,29 @@ def convert_dataset_pickle(root_dir, dataset, classname, img_size):
             img = get_image(os.path.join(root_dir, 'images', filename), img_size, is_crop=IS_CROP, bbox=bbox)
             img = img.astype('uint8')
             imgs.append(img)
+    elif 'celeba' in dataset.lower():
+        print('CelebA!')
+        filenames = glob.glob(os.path.join(root_dir, '*.jpg'))
+        print("#img: " + str(len(filenames)))
+
+        imgs = []
+        for filename in filenames:
+            img = scipy.misc.imread(filename)
+            img = img.astype('uint8')
+            img = scipy.misc.imresize(img, [img_size, img_size], 'bicubic')
+            imgs.append(img)
     else:
         error("unknown dataset!!")
-        
+
+    if ADD_NOISE:
+        noise_list = glob.glob(os.path.join(NOISE_DIR, '*.jpg'))
+        for i in range(NUM_NOISE):
+            print('adding noise %d'%i)
+            img = get_image(noise_list[i], img_size, is_crop=False, bbox=None)
+            if len(img.shape)==2 or img.shape[2]==1:
+                img = colorize(img)
+            img = img.astype('uint8')
+            imgs.append(img)
 
     # train/val division
     randperm = np.random.permutation(len(imgs))
@@ -106,9 +130,12 @@ def convert_dataset_pickle(root_dir, dataset, classname, img_size):
     val = randperm[num_train:]
     # Save images to .pickle
     if IS_CROP:
-        outfile = os.path.join(out_dir, '%dimages_%s_crop.pickle'%(img_size, classname))
+        outfile = os.path.join(out_dir, '%dimages_%s_crop'%(img_size, classname))
     else:
-        outfile = os.path.join(out_dir, '%dimages_%s.pickle'%(img_size, classname))
+        outfile = os.path.join(out_dir, '%dimages_%s'%(img_size, classname))
+    if ADD_NOISE:
+        outfile = outfile + 'N%d'%NUM_NOISE
+    outfile = outfile+'.pickle'
     with open(outfile, 'wb') as f_out:
         pickle.dump({'data': imgs, 'train': train, 'val': val}, f_out)
     
