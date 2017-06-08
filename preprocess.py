@@ -80,6 +80,7 @@ def convert_dataset_pickle(root_dir, dataset, classname, img_size):
         imgs = []
         for filename in filenames:
             img = scipy.misc.imread(filename)
+            img = colorize(img)
             img = img.astype('uint8')
             img = scipy.misc.imresize(img, [img_size, img_size], 'bicubic')
             imgs.append(img)
